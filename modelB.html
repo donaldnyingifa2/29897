@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Mob Wars</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body,
+    html {
+      height: 100%;
+      margin: 0;
+      background-color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    #gameArea {
+      width: 80%;
+      height: 70%;
+      background: #888;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .player {
+      width: 50px;
+      height: 50px;
+      position: absolute;
+      bottom: 50%;
+      background-image: url('https://cdn.jsdelivr.net/gh/user/repo/path-to-player-icon.svg');
+      background-size: cover;
+    }
+
+    #player1 {
+      left: 20px;
+    }
+
+    #player2 {
+      right: 20px;
+    }
+
+    .healthBar {
+      width: 100px;
+      height: 20px;
+      background: green;
+      position: absolute;
+      top: 10px;
+    }
+
+    #health1 {
+      left: 10px;
+    }
+
+    #health2 {
+      right: 10px;
+    }
+
+    #welcome,
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2em;
+      color: white;
+    }
+
+    .weapon {
+      margin: 5px;
+    }
+
+    .day {
+      background: #cceeff;
+    }
+
+    .night {
+      background: #333333;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="gameArea" class="day">
+    <div id="player1" class="player"></div>
+    <div id="player2" class="player"></div>
+    <div id="health1" class="healthBar"></div>
+    <div id="health2" class="healthBar"></div>
+    <div id="welcome">Welcome to Mob Wars</div>
+    <div id="gameOver" style="display:none;"></div>
+    <button id="startGame" class="btn btn-primary"><i class="fas fa-gun"></i> Start</button>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+  <script>
+    $(document).ready(function () {
+      const $gameArea = $('#gameArea');
+      const $player1 = $('#player1');
+      const $player2 = $('#player2');
+      let gameInterval, dayNightCycle;
+      let player1 = { health: 100, y: 50, weapon: 'gun' };
+      let player2 = { health: 100, y: 50, weapon: 'gun', ai: true };
+
+      // Welcome animation
+      const words = ["Welcome", "to", "Mob", "Wars"];
+      let index = 0;
+      setInterval(() => {
+        $('#welcome').html(words.map((word, i) =>
+          `<span style="color:${i === index ? 'red' : 'white'}">${word}</span>`
+        ).join(' '));
+        index = (index + 1) % words.length;
+      }, 1000);
+
+      function startGame() {
+        $('#welcome, #startGame').hide();
+        $gameArea.removeClass('day night').addClass('day');
+        gameInterval = setInterval(gameLogic, 100);
+        dayNightCycle = setInterval(changeEnvironment, 20000);
+      }
+
+      function gameLogic() {
+        // Move players, check for hits, update health, etc.
+        // AI for player2 would go here
+        // Shooting mechanism, health deduction, etc.
+      }
+
+      function changeEnvironment() {
+        $gameArea.toggleClass('day night');
+      }
+
+      $('#startGame').on('click', startGame);
+
+      // Player movement (simplified for this example)
+      $(document).on('keydown', (e) => {
+        if (e.key === 'ArrowUp' && player1.y > 0) player1.y -= 5;
+        else if (e.key === 'ArrowDown' && player1.y < 100) player1.y += 5;
+        $player1.css('bottom', `${player1.y}%`);
+      });
+    });
+  </script>
+</body>
+
+</html>

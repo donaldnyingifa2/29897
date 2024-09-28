@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Mob Wars</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Edu+AU+VIC+WA+NT+Dots:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      background-color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      transition: background-color 1s ease;
+    }
+
+    #gameCanvas {
+      background-size: cover;
+      border: 5px solid #555;
+      border-radius: 25px;
+      transition: background-color 1s ease;
+    }
+
+    @keyframes wordColorChange {
+
+      0%,
+      10% {
+        color: #ff6b6b;
+      }
+
+      15%,
+      100% {
+        color: #444;
+      }
+    }
+
+    #instructions {
+      font-size: 16px;
+      line-height: 5px;
+      color: #444;
+      padding: 20px;
+      border-radius: 25px;
+      background-color: rgba(246, 240, 240, 0.4);
+    }
+
+    @keyframes colorChange {
+
+      0%,
+      10% {
+        color: #b40606;
+      }
+
+      15%,
+      100% {
+        color: #000;
+      }
+    }
+
+    h1 {
+      font-size: 3em;
+      font-weight: 500;
+      word-spacing: 10px;
+    }
+
+    h1 span {
+      animation: colorChange 4s linear infinite;
+    }
+
+    span:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    span:nth-child(2) {
+      animation-delay: 1s;
+    }
+
+    span:nth-child(3) {
+      animation-delay: 2s;
+    }
+
+    span:nth-child(4) {
+      animation-delay: 3s;
+    }
+
+    #startButton {
+      background-color: #444;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-size: 1.5em;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    #startButton:hover {
+      color: #f2eaea;
+      background-color: #000;
+    }
+
+    #startButton::before {
+      content: '🔫 ';
+    }
+
+    #cooldownMessage {
+      position: absolute;
+      top: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: red;
+      font-size: 1.2em;
+      display: none;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2em;
+      display: none;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 25px;
+      color: #f2eaea;
+    }
+
+    #status {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 1em;
+    }
+
+    .day {
+      background-image: url('https://cdn.pixabay.com/photo/2023/08/06/15/39/mountains-8173221_1280.jpg');
+      background-repeat: none;
+      background-size: cover;
+    }
+
+    .night {
+      background-image: url('https://cdn.pixabay.com/photo/2022/02/18/18/31/moon-7021271_1280.jpg');
+      background-repeat: none;
+      background-size: cover;
+    }
+  </style>
+</head>
+
+<body class="day">
+  <div id="welcome">
+    <h1>
+      <span>Welcome</span>
+      <span>to</span>
+      <span>Mob</span>
+      <span>Wars</span>
+    </h1>
+  </div>
+
+  <div id="instructions">
+    <p>Press 'P' to Pause/Resume | Press 'B' to Switch Weapon</p>
+    <p>Use up/down button to move up/down. Space to shoot.</p>
+  </div>
+
+  <button id="startButton">Start</button>
+  <canvas id="gameCanvas" width="800" height="600" style="display: none;"></canvas>
+  <div id="gameOver"></div>
+  <div id="status"></div>
+  <div id="cooldownMessage" />
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startButton = document.getElementById('startButton');
+    const gameOverDiv = document.getElementById('gameOver');
+    const statusDiv = document.getElementById('status');
+    const gunshotSound = new Audio('https://soundbible.com/mp3/MP5_SMG-GunGuru-703432894.mp3');
+    const bombSound = new Audio('https://soundbible.com/mp3/Shotgun_Blast-Jim_Rogers-1914772763.mp3');
+
+    let gameRunning = false;
+    let gamePaused = false;
+    let weapon = 'gun'; // Default weapon is 'gun'
+    let player, computer, bullets = [];
+    let lastBombTimePlayer = 0;
+    let lastBombTimeComputer = 0;
+    const BOMB_COOLDOWN = 15000; // 15 seconds in milliseconds
+    let isDay = true; // Start with day time
+    let dayNightInterval;
+
+    class Fighter {
+      constructor(x, isPlayer) {
+        this.x = x;
+        this.y = canvas.height / 2;
+        this.health = 100;
+        this.width = 100;
+        this.height = 100;
+        this.isPlayer = isPlayer;
+        this.image = new Image();
+        this.image.src = `https://robohash.org/${Math.random()}?size=100x100`;
+      }
+
+      move(dy) {
+        this.y = Math.max(0, Math.min(this.y + dy, canvas.height - this.height));
+      }
+
+      canShootBomb() {
+        const now = Date.now();
+        if (this.isPlayer) {
+          return now - lastBombTimePlayer >= BOMB_COOLDOWN;
+        } else {
+          return now - lastBombTimeComputer >= BOMB_COOLDOWN;
+        }
+      }
+
+
+      shoot() {
+        const bulletDamage = weapon === 'gun' ? 10 : 30;
+        const bulletSize = weapon === 'gun' ? 5 : 25;
+        const bulletColor = weapon === 'gun' ? '#fff' : 'silver';
+
+        if (weapon === 'bomb' && !this.canShootBomb()) {
+          const cooldownMessage = document.getElementById('cooldownMessage');
+          const now = Date.now();
+          const timeLeft = Math.ceil((BOMB_COOLDOWN - (now - lastBombTimePlayer)) / 1000);
+
+          cooldownMessage.textContent = `${timeLeft} second${timeLeft > 1 ? 's' : ''} before bomb is ready for use.`;
+          cooldownMessage.style.display = 'block';
+
+          setTimeout(() => {
+            cooldownMessage.style.display = 'none';
+          }, 3000);
+
+          return;
+        }
+
+
+        bullets.push({
+          x: this.x + (this.isPlayer ? this.width : -10),
+          y: this.y + this.height / 2,
+          vx: this.isPlayer ? 10 : -10,
+          damage: bulletDamage,
+          size: bulletSize,
+          color: bulletColor
+        });
+
+        if (weapon === 'bomb') {
+          if (this.isPlayer) lastBombTimePlayer = Date.now();
+          else lastBombTimeComputer = Date.now();
+        }
+
+        if (this.isPlayer && weapon === 'bomb') bombSound.play();
+        else if (this.isPlayer && weapon !== 'bomb') gunshotSound.play();
+      }
+
+      draw() {
+        ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        ctx.fillStyle = 'green';
+        ctx.fillRect(this.x, this.y - 10, this.width * (this.health / 100), 5);
+      }
+    }
+
+    function startGame() {
+      player = new Fighter(50, true);
+      computer = new Fighter(canvas.width - 150, false);
+      gameRunning = true;
+      canvas.style.display = 'block';
+      document.getElementById('welcome').style.display = 'none';
+      document.getElementById('instructions').style.display = 'none';
+      startButton.style.display = 'none';
+      statusDiv.innerHTML = `Weapon: ${weapon.toUpperCase()} | Press 'P' to Pause/Resume | Press 'B' to Switch Weapon`;
+      dayNightCycle();
+      gameLoop();
+    }
+
+    function dayNightCycle() {
+      clearInterval(dayNightInterval);
+      dayNightInterval = setInterval(() => {
+        isDay = !isDay;
+        document.body.className = isDay ? 'day' : 'night';
+        statusDiv.style.color = isDay ? '#000' : '#fff';
+      }, 20000); // 20 seconds interval
+    }
+
+    function gameLoop() {
+      if (!gameRunning || gamePaused) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      player.draw();
+      computer.draw();
+
+      for (let bullet of bullets) {
+        bullet.x += bullet.vx;
+        ctx.fillStyle = bullet.color;
+        ctx.fillRect(bullet.x, bullet.y, bullet.size, bullet.size);
+
+        if (bullet.x > canvas.width || bullet.x < 0) bullets.splice(bullets.indexOf(bullet), 1);
+        else {
+          let target = bullet.vx > 0 ? computer : player;
+          if (bullet.x > target.x && bullet.x < target.x + target.width &&
+            bullet.y > target.y && bullet.y < target.y + target.height) {
+            target.health -= bullet.damage;
+            bullets.splice(bullets.indexOf(bullet), 1);
+            if (target.health <= 0) endGame(!target.isPlayer);
+          }
+        }
+      }
+
+      if (Math.random() < 0.02 && computer.canShootBomb()) computer.shoot(); // Computer can only shoot bomb if cooldown allows
+      let dy = Math.random() > 0.5 ? 5 : -5;
+      computer.move(dy);
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function endGame(playerWon) {
+      gameRunning = false;
+      gameOverDiv.textContent = `Game Over! ${playerWon ? 'You Win!' : 'Computer Wins!'}`;
+      gameOverDiv.style.display = 'block';
+      clearInterval(dayNightInterval);
+    }
+
+    function togglePause() {
+      gamePaused = !gamePaused;
+      if (!gamePaused) gameLoop();
+    }
+
+    function switchWeapon() {
+      weapon = weapon === 'gun' ? 'bomb' : 'gun';
+      statusDiv.innerHTML = `Weapon: ${weapon.toUpperCase()} | Press 'P' to Pause/Resume | Press 'B' to Switch Weapon`;
+    }
+
+    startButton.onclick = startGame;
+
+    document.addEventListener('keydown', (e) => {
+      if (!gameRunning) return;
+      if (e.key === 'ArrowUp') player.move(-10);
+      if (e.key === 'ArrowDown') player.move(10);
+      if (e.key === ' ') player.shoot();
+      if (e.key === 'p' || e.key === 'P') togglePause();
+      if (e.key === 'b' || e.key === 'B') switchWeapon();
+    });
+  </script>
+</body>
+
+</html>
